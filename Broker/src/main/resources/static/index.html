@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Broker - Online Shopping System</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, "Segoe UI", sans-serif;
+      margin: 0; padding: 2rem;
+      background: #0f1115; color: #e6e8eb;
+    }
+    h1 { margin: 0 0 .25rem; font-size: 1.5rem; }
+    .sub { color: #8b93a1; margin-bottom: 1.5rem; font-size: .9rem; }
+    .empty {
+      padding: 2rem; text-align: center; color: #8b93a1;
+      border: 1px dashed #2c313a; border-radius: 8px;
+    }
+    .card {
+      border: 1px solid #2c313a; border-radius: 8px;
+      padding: 1rem 1.25rem; margin-bottom: .75rem; background: #171a21;
+    }
+    .row { display: flex; align-items: center; gap: .75rem; }
+    .name { font-weight: 600; font-size: 1.05rem; }
+    .up {
+      font-size: .7rem; font-weight: 700; letter-spacing: .05em;
+      background: #113d29; color: #4ade80;
+      padding: .15rem .5rem; border-radius: 999px;
+    }
+    .url { color: #7dd3fc; font-family: ui-monospace, monospace; font-size: .85rem; }
+    .meta { color: #8b93a1; font-size: .8rem; margin-top: .5rem; }
+    .ops { margin-top: .6rem; display: flex; flex-wrap: wrap; gap: .3rem; }
+    .op {
+      font-size: .72rem; font-family: ui-monospace, monospace;
+      background: #232833; color: #b8c0cc;
+      padding: .12rem .45rem; border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Broker &mdash; Service Registry</h1>
+  <div class="sub">Online Shopping System (SWD392) &middot; tu lam moi moi 3 giay</div>
+  <div id="list"></div>
+
+  <script>
+    const list = document.getElementById('list');
+
+    function render(services) {
+      if (!services.length) {
+        list.innerHTML = '<div class="empty">Chua co service nao dang ky.<br>'
+          + 'Hay chay CustomerAccountService, no se tu dang ky sau vai giay.</div>';
+        return;
+      }
+      list.innerHTML = services.map(s => `
+        <div class="card">
+          <div class="row">
+            <span class="name">${s.serviceName}</span>
+            <span class="up">${s.status}</span>
+            <a class="url" href="${s.baseUrl}" target="_blank">${s.baseUrl}</a>
+          </div>
+          <div class="meta">
+            v${s.version ?? '?'} &middot; serviceId ${s.serviceId} &middot;
+            heartbeat cuoi: ${new Date(s.lastHeartbeat).toLocaleTimeString('vi-VN')}
+          </div>
+          <div class="ops">${(s.operations ?? []).map(o => `<span class="op">${o}</span>`).join('')}</div>
+        </div>`).join('');
+    }
+
+    async function refresh() {
+      try {
+        render(await (await fetch('/registry/services')).json());
+      } catch {
+        list.innerHTML = '<div class="empty">Khong goi duoc Broker API.</div>';
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 3000);
+  </script>
+</body>
+</html>
