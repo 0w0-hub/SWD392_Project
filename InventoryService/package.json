@@ -1,0 +1,17 @@
+{
+  "name": "inventory-service",
+  "version": "0.0.1",
+  "description": "Inventory Service (Gomaa Ch.22 Online Shopping System) — Express + SQLite",
+  "private": true,
+  "license": "UNLICENSED",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/seed.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "express": "^4.21.2"
+  }
+}
