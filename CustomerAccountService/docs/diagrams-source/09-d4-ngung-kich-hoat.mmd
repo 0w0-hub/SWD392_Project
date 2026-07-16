@@ -1,0 +1,23 @@
+---
+title: "D4 · Luồng thay thế — Ngừng kích hoạt khách hàng còn tiền bị giữ"
+---
+sequenceDiagram
+    autonumber
+    participant CC as Customer Coordinator
+    participant CAS as CustomerAccountService
+    participant ACC as CustomerAccount
+
+    CC->>CAS: deactivateCustomer(1)
+    activate CAS
+    CAS->>ACC: kiểm tra các tài khoản của khách
+    ACC-->>CAS: heldAmount = ?
+
+    alt Còn heldAmount > 0
+        Note over CAS: Khách còn đơn hàng CHƯA tất toán!<br/>Nếu cho ngừng kích hoạt,<br/>tiền của khách sẽ bị kẹt vĩnh viễn.
+        CAS-->>CC: 409 BUSINESS_RULE_VIOLATED<br/>"còn tiền đang bị giữ cho đơn chưa tất toán"
+    else heldAmount = 0
+        CAS->>CAS: status = INACTIVE (soft delete)
+        Note over CAS: KHÔNG xóa cứng!<br/>Tài khoản + sổ cái phải giữ lại để<br/>đối soát với DeliveryOrderService.
+        CAS-->>CC: 200 OK · status = INACTIVE
+    end
+    deactivate CAS

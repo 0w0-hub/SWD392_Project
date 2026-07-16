@@ -1,0 +1,34 @@
+---
+title: "UC-5 · Luồng thay thế khi Broker gặp sự cố (E1, E2, E3)"
+---
+sequenceDiagram
+    autonumber
+    participant CAS as CustomerAccountService
+    participant BR as Broker
+
+    rect rgb(254, 243, 199)
+    Note over CAS,BR: E1 — Broker CHƯA CHẠY lúc service khởi động
+    CAS->>BR: POST /registry/services
+    BR--xCAS: Connection refused
+    Note over CAS: Chỉ ghi WARN.<br/>API VẪN phục vụ bình thường!
+    loop mỗi 30 giây
+        CAS->>BR: thử đăng ký lại
+    end
+    BR-->>CAS: 201 Created ✓
+    end
+
+    rect rgb(219, 234, 254)
+    Note over CAS,BR: E2 — Broker RESTART, mất sạch registry
+    CAS->>BR: PUT /registry/services/{id}/heartbeat
+    BR-->>CAS: 404 (không biết serviceId này)
+    Note over CAS: registered = false → tự đăng ký lại
+    CAS->>BR: POST /registry/services
+    BR-->>CAS: 201 ✓
+    end
+
+    rect rgb(254, 226, 226)
+    Note over CAS,BR: E3 — Service bị KILL đột ngột (không kịp gọi DELETE)
+    Note over BR: Không nhận heartbeat quá 90 giây
+    BR->>BR: LOẠI BỎ CustomerAccountService khỏi registry
+    Note over BR: Không chỉ đường cho client<br/>gọi vào một service đã chết
+    end

@@ -1,0 +1,29 @@
+---
+title: "State machine của AccountHold — trạng thái thanh toán của một đơn hàng"
+---
+stateDiagram-v2
+    [*] --> HELD : placeHold(orderId, amount)<br/>Coordinator authorize → khóa tiền
+
+    HELD --> CAPTURED : captureHold()<br/>hàng đã giao → TRỪ TIỀN THẬT
+    HELD --> RELEASED : releaseHold()<br/>đơn bị hủy → TRẢ LẠI TIỀN
+
+    CAPTURED --> [*]
+    RELEASED --> [*]
+
+    note left of HELD
+        Gọi placeHold() lần 2 với cùng orderId:
+        trả về chính khoản giữ này (idempotent),
+        KHÔNG giữ thêm tiền.
+    end note
+
+    note right of CAPTURED
+        captureHold() lần 2: idempotent, không trừ thêm.
+        releaseHold() ở đây: TỪ CHỐI 409
+        (tiền đã trừ → phải dùng refund).
+    end note
+
+    note right of RELEASED
+        releaseHold() lần 2: idempotent.
+        captureHold() ở đây: TỪ CHỐI 409
+        (đơn đã hủy → không thể trừ tiền).
+    end note

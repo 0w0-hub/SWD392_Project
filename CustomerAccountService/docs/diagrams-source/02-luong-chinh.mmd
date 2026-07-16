@@ -1,0 +1,24 @@
+---
+title: "UC-1 · LUỒNG CHÍNH — Khách đặt hàng, tiền bị khóa (chưa trừ)"
+---
+sequenceDiagram
+    autonumber
+    participant BC as Billing Coordinator
+    participant CAS as CustomerAccountService
+    participant ACC as CustomerAccount (entity)
+    participant DB as Sổ cái
+
+    BC->>CAS: placeHold(accountId=1, "ORD-001", 300)
+    activate CAS
+    CAS->>ACC: khóa dòng (FOR UPDATE) + hold(300)
+    activate ACC
+    ACC->>ACC: kiểm tra available (1000) ≥ 300 ✓
+    ACC->>ACC: heldAmount += 300
+    Note right of ACC: balance = 1000 (KHÔNG đổi)<br/>heldAmount = 300<br/>available = 700
+    deactivate ACC
+    CAS->>DB: lưu AccountHold(ORD-001, HELD)
+    CAS->>DB: ghi sổ AccountTransaction(HOLD)
+    CAS-->>BC: 200 OK · {status: HELD}
+    deactivate CAS
+
+    Note over BC,DB: Tiền chỉ bị KHÓA. Khách chưa bị trừ đồng nào.

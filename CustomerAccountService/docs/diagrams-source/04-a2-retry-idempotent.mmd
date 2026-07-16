@@ -1,0 +1,23 @@
+---
+title: "A2 · Luồng thay thế — Coordinator RETRY (idempotent theo orderId)"
+---
+sequenceDiagram
+    autonumber
+    participant BC as Billing Coordinator
+    participant CAS as CustomerAccountService
+    participant ACC as CustomerAccount
+
+    BC->>CAS: placeHold(1, "ORD-001", 300)
+    CAS->>ACC: heldAmount += 300
+    CAS-->>BC: 200 · hold#1 (HELD)
+    Note over BC,CAS: ✗ Phản hồi MẤT trên đường về<br/>Coordinator tưởng thất bại → gọi lại
+
+    BC->>CAS: placeHold(1, "ORD-001", 300) [RETRY]
+    activate CAS
+    CAS->>CAS: tra bảng: orderId "ORD-001" đã có khoản giữ
+    Note over CAS: Trả về NGAY khoản giữ cũ.<br/>KHÔNG chạm vào số dư.
+    CAS-->>BC: 200 · hold#1 (HELD) — vẫn là cái cũ
+    deactivate CAS
+
+    Note over ACC: heldAmount vẫn = 300<br/>KHÔNG phải 600
+    Note over BC,ACC: Cơ chế: order_id là UNIQUE constraint.<br/>Gọi lại bao nhiêu lần cũng chỉ giữ tiền MỘT lần.

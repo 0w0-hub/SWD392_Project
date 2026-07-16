@@ -1,0 +1,26 @@
+---
+title: "A5 · Luồng thay thế — HAI ĐƠN ĐẶT CÙNG LÚC (chống race condition)"
+---
+sequenceDiagram
+    autonumber
+    participant A as Request A<br/>(giữ 400)
+    participant B as Request B<br/>(giữ 400)
+    participant DB as Dòng tài khoản<br/>available = 700
+
+    par Hai request tới cùng một lúc
+        A->>DB: SELECT ... FOR UPDATE
+    and
+        B->>DB: SELECT ... FOR UPDATE
+    end
+
+    Note over DB: B chiếm được khóa trước
+    DB-->>B: available = 700
+    B->>DB: heldAmount = 400 · COMMIT · mở khóa
+    Note over A: A bị CHẶN — phải chờ B xong
+
+    DB-->>A: available = 300  ← số dư ĐÃ CẬP NHẬT
+    A->>A: 300 < 400 ✗
+    A--xDB: 422 INSUFFICIENT_FUNDS
+
+    Note over DB: Kết quả: heldAmount = 400 (chỉ 1 đơn thành công)
+    Note over A,DB: Nếu KHÔNG khóa dòng: cả hai cùng đọc 700,<br/>cùng thấy đủ tiền, cùng giữ 400<br/>→ tổng giữ 800 > số dư → TIỀN ÂM (lost update)
