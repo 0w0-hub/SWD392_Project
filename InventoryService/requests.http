@@ -1,0 +1,86 @@
+### InventoryService — API test collection
+### Chạy: npm run seed && npm start   (server: http://localhost:3004)
+### Dùng VS Code "REST Client" extension → bấm "Send Request" trên từng khối.
+### Seed data: 1001 (qty 50), 1002 (qty 12), 1003 (qty 3)
+
+@baseUrl = http://localhost:3004
+
+### 0. Health check
+GET {{baseUrl}}/health
+
+### -------------------------------------------------------------------------
+### checkInventory (D5) — xem tồn kho
+### -------------------------------------------------------------------------
+
+### 1. Check item 1001 (qty 50, reserved 0)
+GET {{baseUrl}}/inventory/1001/check
+
+### 2. Check item 1003 (qty 3)
+GET {{baseUrl}}/inventory/1003/check
+
+### -------------------------------------------------------------------------
+### MAIN FLOW: reserve (D11, prepare) -> commit (S9, commit)
+### -------------------------------------------------------------------------
+
+### 3. Reserve 2 units of 1001  -> quantityReserved += 2
+POST {{baseUrl}}/inventory/1001/reserve
+Content-Type: application/json
+
+{ "amount": 2 }
+
+### 4. Commit 2 units of 1001  -> quantity -= 2, reserved -= 2
+POST {{baseUrl}}/inventory/1001/commit
+Content-Type: application/json
+
+{ "amount": 2 }
+
+### -------------------------------------------------------------------------
+### ALTERNATIVE FLOW (Fig 22.15a): reserve -> abort (S11 "Items Released")
+### -------------------------------------------------------------------------
+
+### 5. Reserve 5 units of 1001
+POST {{baseUrl}}/inventory/1001/reserve
+Content-Type: application/json
+
+{ "amount": 5 }
+
+### 6. Abort 5 units of 1001  -> reserved nhả về, quantity KHÔNG đổi
+POST {{baseUrl}}/inventory/1001/abort
+Content-Type: application/json
+
+{ "amount": 5 }
+
+### -------------------------------------------------------------------------
+### update — nhập thêm kho
+### -------------------------------------------------------------------------
+
+### 7. Restock 1003 thêm 20 units  -> quantity += 20
+PATCH {{baseUrl}}/inventory/1003
+Content-Type: application/json
+
+{ "amount": 20 }
+
+### -------------------------------------------------------------------------
+### ERROR CASES
+### -------------------------------------------------------------------------
+
+### 8. Out of stock -> 409 (reserve 100 khi 1003 chỉ có 3)
+POST {{baseUrl}}/inventory/1003/reserve
+Content-Type: application/json
+
+{ "amount": 100 }
+
+### 9. Validation -> 400 (amount không hợp lệ)
+POST {{baseUrl}}/inventory/1001/reserve
+Content-Type: application/json
+
+{ "amount": 0 }
+
+### 10. Not found -> 404 (item không tồn tại)
+GET {{baseUrl}}/inventory/9999/check
+
+### 11. Commit quá số đã reserve -> 409
+POST {{baseUrl}}/inventory/1002/commit
+Content-Type: application/json
+
+{ "amount": 5 }
