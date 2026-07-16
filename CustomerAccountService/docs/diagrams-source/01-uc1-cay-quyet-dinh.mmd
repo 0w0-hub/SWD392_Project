@@ -1,0 +1,36 @@
+---
+title: "UC-1 · Thanh toán đơn hàng (placeHold) — Toàn bộ các nhánh"
+---
+flowchart TD
+    START([Billing Coordinator gọi placeHold]) --> V{"Dữ liệu hợp lệ?<br/>amount > 0, orderId không rỗng"}
+    V -->|Không| A6["<b>A6</b> · 400 VALIDATION_FAILED"]
+
+    V -->|Có| DUP{"orderId đã có<br/>khoản giữ chưa?"}
+    DUP -->|Rồi| A2["<b>A2</b> · Trả về khoản giữ CŨ<br/>KHÔNG giữ tiền lần nữa<br/>(idempotent)"]
+
+    DUP -->|Chưa| ACC{"Tài khoản<br/>có tồn tại?"}
+    ACC -->|Không| A3["<b>A3</b> · 404 NOT_FOUND"]
+
+    ACC -->|Có| LOCK[/"Khóa dòng tài khoản<br/>SELECT ... FOR UPDATE"/]
+    LOCK --> A5["<b>A5</b> · Nếu request khác đang giữ khóa:<br/>CHỜ tới lượt, rồi đọc lại số dư MỚI"]
+    A5 --> ST{"Tài khoản<br/>ACTIVE?"}
+
+    ST -->|SUSPENDED / CLOSED| A4["<b>A4</b> · 409 BUSINESS_RULE_VIOLATED"]
+
+    ST -->|ACTIVE| FUND{"available >= amount?<br/>available = balance − heldAmount"}
+    FUND -->|Không| A1["<b>A1</b> · 422 INSUFFICIENT_FUNDS<br/>rollback sạch — heldAmount không đổi"]
+
+    FUND -->|Có| MAIN["<b>LUỒNG CHÍNH</b><br/>heldAmount += amount<br/>balance KHÔNG đổi<br/>tạo AccountHold (HELD)<br/>ghi sổ cái HOLD"]
+    MAIN --> OK([200 OK · status = HELD])
+
+    classDef main fill:#d1fae5,stroke:#059669,stroke-width:2px,color:#000
+    classDef warn fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#000
+    classDef info fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#000
+    classDef err fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#000
+    classDef lock fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#000
+
+    class MAIN,OK main
+    class A1 warn
+    class A2 info
+    class A3,A4,A6 err
+    class A5,LOCK lock

@@ -1,0 +1,23 @@
+---
+title: "A1 · Luồng thay thế — Khách KHÔNG ĐỦ TIỀN"
+---
+sequenceDiagram
+    autonumber
+    participant BC as Billing Coordinator
+    participant CAS as CustomerAccountService
+    participant ACC as CustomerAccount (entity)
+
+    Note over ACC: Tài khoản Huy: balance = 250
+    BC->>CAS: placeHold(accountId=2, "ORD-003", 999)
+    activate CAS
+    CAS->>ACC: hold(999)
+    activate ACC
+    ACC->>ACC: available (250) < 999 ✗
+    ACC--xCAS: InsufficientFundsException
+    deactivate ACC
+
+    Note over CAS: TRANSACTION ROLLBACK<br/>heldAmount KHÔNG đổi (vẫn 0)<br/>không tạo Hold · không ghi sổ cái
+    CAS-->>BC: 422 INSUFFICIENT_FUNDS<br/>{available: 250, requested: 999}
+    deactivate CAS
+
+    Note over BC: Coordinator TỪ CHỐI đơn hàng,<br/>báo khách nạp thêm tiền

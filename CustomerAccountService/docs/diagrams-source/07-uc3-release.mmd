@@ -1,0 +1,21 @@
+---
+title: "UC-3 · Hủy đơn hàng — trả lại tiền (releaseHold)"
+---
+flowchart TD
+    START([Đơn bị hủy → Coordinator gọi releaseHold]) --> EX{"Có khoản giữ<br/>cho orderId?"}
+    EX -->|Không| C3["<b>C3</b> · 404 NOT_FOUND"]
+
+    EX -->|Có| ST{"Trạng thái<br/>khoản giữ?"}
+    ST -->|RELEASED| C1["<b>C1</b> · Trả về ngay (idempotent)<br/>KHÔNG trả tiền lần nữa"]
+    ST -->|CAPTURED| C2["<b>C2</b> · 409 BUSINESS_RULE_VIOLATED<br/>Tiền đã bị trừ (hàng đã giao)<br/>→ phải dùng nghiệp vụ REFUND"]
+
+    ST -->|HELD| MAIN["<b>LUỒNG CHÍNH</b><br/>khóa dòng tài khoản<br/>heldAmount −= amount<br/>balance KHÔNG đổi  ← chỉ MỞ KHÓA<br/>ghi sổ cái RELEASE"]
+    MAIN --> OK([200 OK · status = RELEASED])
+
+    classDef main fill:#d1fae5,stroke:#059669,stroke-width:2px,color:#000
+    classDef info fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#000
+    classDef err fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#000
+
+    class MAIN,OK main
+    class C1 info
+    class C2,C3 err

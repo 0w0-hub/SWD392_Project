@@ -1,0 +1,21 @@
+---
+title: "UC-2 · Giao hàng — confirm billing (captureHold)"
+---
+flowchart TD
+    START([Hàng đã giao → Coordinator gọi captureHold]) --> EX{"Có khoản giữ<br/>cho orderId?"}
+    EX -->|Không| B3["<b>B3</b> · 404 NOT_FOUND"]
+
+    EX -->|Có| ST{"Trạng thái<br/>khoản giữ?"}
+    ST -->|CAPTURED| B1["<b>B1</b> · Trả về ngay (idempotent)<br/>KHÔNG trừ tiền lần nữa"]
+    ST -->|RELEASED| B2["<b>B2</b> · 409 BUSINESS_RULE_VIOLATED<br/>Đơn đã hủy → không thể trừ tiền"]
+
+    ST -->|HELD| MAIN["<b>LUỒNG CHÍNH</b><br/>khóa dòng tài khoản<br/>heldAmount −= amount<br/>balance −= amount  ← TRỪ TIỀN THẬT<br/>ghi sổ cái CAPTURE"]
+    MAIN --> OK([200 OK · status = CAPTURED])
+
+    classDef main fill:#d1fae5,stroke:#059669,stroke-width:2px,color:#000
+    classDef info fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#000
+    classDef err fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#000
+
+    class MAIN,OK main
+    class B1 info
+    class B2,B3 err
