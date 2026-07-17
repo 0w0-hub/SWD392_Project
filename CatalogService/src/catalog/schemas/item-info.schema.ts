@@ -1,24 +1,42 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import {
+  Check,
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+} from 'typeorm';
+import { CatalogInfo } from './catalog-info.schema';
+import { Supplier } from './supplier.schema';
 
-export type ItemInfoDocument = ItemInfo & Document;
-
-@Schema()
+@Entity({ name: 'items' })
+@Check('CHK_item_id_positive', 'itemId > 0')
+@Check('CHK_item_unit_cost_non_negative', 'unitCost >= 0')
+@Check('CHK_item_supplier_id_positive', 'supplierId > 0')
 export class ItemInfo {
-  @Prop({ required: true })
+  @PrimaryColumn({ type: 'integer' })
   itemId: number;
 
-  @Prop({ required: true })
+  @Column()
   itemDescription: string;
 
-  @Prop({ required: true })
+  @Column({ type: 'real' })
   unitCost: number;
 
-  @Prop({ required: true })
+  @Column({ type: 'integer' })
   supplierId: number;
 
-  @Prop()
-  itemDetails: string;
-}
+  @Column({ type: 'text', nullable: true })
+  itemDetails: string | null;
 
-export const ItemInfoSchema = SchemaFactory.createForClass(ItemInfo);
+  @ManyToOne(() => Supplier, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'supplierId', referencedColumnName: 'supplierId' })
+  supplier: Supplier;
+
+  @ManyToOne(() => CatalogInfo, (catalog) => catalog.items, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'catalogId', referencedColumnName: 'catalogId' })
+  catalog: CatalogInfo;
+}

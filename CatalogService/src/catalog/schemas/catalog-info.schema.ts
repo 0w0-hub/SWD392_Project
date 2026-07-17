@@ -1,26 +1,36 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import {
+  Check,
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryColumn,
+} from 'typeorm';
 import { CatalogType } from '../enums/catalog-type.enum';
 import { ItemInfo } from './item-info.schema';
+import { Supplier } from './supplier.schema';
 
-export type CatalogInfoDocument = CatalogInfo & Document;
-
-@Schema()
+@Entity({ name: 'catalogs' })
+@Check('CHK_catalog_id_positive', 'catalogId > 0')
+@Check('CHK_catalog_supplier_id_positive', 'supplierId > 0')
 export class CatalogInfo {
-  @Prop({ required: true })
+  @PrimaryColumn({ type: 'integer' })
   catalogId: number;
 
-  @Prop({ required: true })
+  @Column()
   catalogDescription: string;
 
-  @Prop({ required: true })
+  @Column({ type: 'integer' })
   supplierId: number;
 
-  @Prop({ type: String, enum: CatalogType, required: true })
+  @Column({ type: 'simple-enum', enum: CatalogType })
   catalogType: CatalogType;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'ItemInfo' }] })
+  @ManyToOne(() => Supplier, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'supplierId', referencedColumnName: 'supplierId' })
+  supplier: Supplier;
+
+  @OneToMany(() => ItemInfo, (item) => item.catalog, { cascade: true })
   items: ItemInfo[];
 }
-
-export const CatalogInfoSchema = SchemaFactory.createForClass(CatalogInfo);

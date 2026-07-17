@@ -1,27 +1,23 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Check, Column, Entity, PrimaryColumn } from 'typeorm';
 
-export type SupplierDocument = Supplier & Document;
-
-@Schema()
+@Entity({ name: 'suppliers' })
+@Check('CHK_supplier_id_positive', 'supplierId > 0')
 export class Supplier {
-  @Prop({ required: true })
+  @PrimaryColumn({ type: 'integer' })
   supplierId: number;
 
-  @Prop({ required: true })
+  @Column()
   supplierName: string;
 
-  @Prop()
-  address: string;
+  @Column({ type: 'text', nullable: true })
+  address: string | null;
 
-  @Prop()
-  telephoneNumber: string;
+  @Column({ type: 'text', nullable: true })
+  telephoneNumber: string | null;
 
-  @Prop()
-  faxNumber: string;
+  @Column({ type: 'text', nullable: true })
+  faxNumber: string | null;
 
-  @Prop()
-  email: string;
+  @Column({ type: 'text', nullable: true })
+  email: string | null;
 }
-
-export const SupplierSchema = SchemaFactory.createForClass(Supplier);
