@@ -3,77 +3,61 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { DeliveryOrderRepository } from './delivery-order.repository';
 import { OrderStatus } from './enums/order-status.enum';
 import { IDeliveryOrderService } from './interfaces/idelivery-order.service';
-import {
-  DeliveryOrder,
-  DeliveryOrderDocument,
-} from './schemas/delivery-order.schema';
+import { DeliveryOrder } from './schemas/delivery-order.schema';
 import { Invoice } from './schemas/invoice.schema';
 
 @Injectable()
 export class DeliveryOrderService implements IDeliveryOrderService {
   constructor(
-    @InjectModel(DeliveryOrder.name)
-    private deliveryOrderModel: Model<DeliveryOrderDocument>,
+    private readonly deliveryOrderRepository: DeliveryOrderRepository,
   ) {}
 
-  async store(order: DeliveryOrder): Promise<number> {
-    const orderId = order.orderId ?? (await this.getNextOrderId());
-    const createdOrder = new this.deliveryOrderModel({
+  store(order: DeliveryOrder): Promise<number> {
+    const orderId =
+      order.orderId ?? this.deliveryOrderRepository.getNextOrderId();
+    const createdOrder: DeliveryOrder = {
       ...order,
       orderId,
       orderStatus: order.orderStatus ?? OrderStatus.NotYetShipped,
       creationDate: order.creationDate ?? new Date(),
-    });
+      items: order.items ?? [],
+    };
 
-    await createdOrder.save();
-    return orderId;
+    this.deliveryOrderRepository.insert(createdOrder);
+    return Promise.resolve(orderId);
   }
 
-  async select(supplierId: number): Promise<DeliveryOrder> {
-    const order = await this.deliveryOrderModel
-      .findOne({
-        supplierId,
-        orderStatus: OrderStatus.NotYetShipped,
-      })
-      .sort({ creationDate: 1 })
-      .exec();
+  select(supplierId: number): Promise<DeliveryOrder> {
+    const order = this.deliveryOrderRepository.findNextForSupplier(supplierId);
 
-    return this.requireOrder(
-      order,
-      `No delivery order found for supplier ${supplierId}`,
+    return Promise.resolve(
+      this.requireOrder(
+        order,
+        `No delivery order found for supplier ${supplierId}`,
+      ),
     );
   }
 
-  async update(
-    orderId: number,
-    order: Partial<DeliveryOrder>,
-  ): Promise<OrderStatus> {
-    const updatedOrder = await this.deliveryOrderModel
-      .findOneAndUpdate({ orderId }, order, { new: true, runValidators: true })
-      .exec();
+  update(orderId: number, order: Partial<DeliveryOrder>): Promise<OrderStatus> {
+    const updatedOrder = this.deliveryOrderRepository.update(orderId, order);
 
-    return this.requireOrder(updatedOrder, `Order ${orderId} not found`)
-      .orderStatus;
+    return Promise.resolve(
+      this.requireOrder(updatedOrder, `Order ${orderId} not found`).orderStatus,
+    );
   }
 
-  async orderShipped(orderId: number): Promise<OrderStatus> {
-    const updatedOrder = await this.deliveryOrderModel
-      .findOneAndUpdate(
-        { orderId },
-        {
-          orderStatus: OrderStatus.Shipped,
-          actualShipDate: new Date(),
-        },
-        { new: true },
-      )
-      .exec();
+  orderShipped(orderId: number): Promise<OrderStatus> {
+    const updatedOrder = this.deliveryOrderRepository.update(orderId, {
+      orderStatus: OrderStatus.Shipped,
+      actualShipDate: new Date(),
+    });
 
-    return this.requireOrder(updatedOrder, `Order ${orderId} not found`)
-      .orderStatus;
+    return Promise.resolve(
+      this.requireOrder(updatedOrder, `Order ${orderId} not found`).orderStatus,
+    );
   }
 
   async confirmPayment(orderId: number, amount: number): Promise<OrderStatus> {
@@ -85,24 +69,20 @@ export class DeliveryOrderService implements IDeliveryOrderService {
       );
     }
 
-    const updatedOrder = await this.deliveryOrderModel
-      .findOneAndUpdate(
-        { orderId },
-        {
-          paymentDate: new Date(),
-          orderStatus: OrderStatus.PreparedForShipment,
-        },
-        { new: true },
-      )
-      .exec();
+    const updatedOrder = this.deliveryOrderRepository.update(orderId, {
+      paymentDate: new Date(),
+      orderStatus: OrderStatus.PreparedForShipment,
+    });
 
     return this.requireOrder(updatedOrder, `Order ${orderId} not found`)
       .orderStatus;
   }
 
-  async read(orderId: number): Promise<DeliveryOrder> {
-    const order = await this.deliveryOrderModel.findOne({ orderId }).exec();
-    return this.requireOrder(order, `Order ${orderId} not found`);
+  read(orderId: number): Promise<DeliveryOrder> {
+    const order = this.deliveryOrderRepository.findByOrderId(orderId);
+    return Promise.resolve(
+      this.requireOrder(order, `Order ${orderId} not found`),
+    );
   }
 
   async requestInvoice(orderId: number): Promise<Invoice> {
@@ -117,50 +97,33 @@ export class DeliveryOrderService implements IDeliveryOrderService {
     };
   }
 
-  async prepareToCommitOrder(orderId: number): Promise<DeliveryOrder> {
-    const order = await this.deliveryOrderModel
-      .findOneAndUpdate(
-        { orderId },
-        { orderStatus: OrderStatus.PreparedForShipment },
-        { new: true },
-      )
-      .exec();
+  prepareToCommitOrder(orderId: number): Promise<DeliveryOrder> {
+    const order = this.deliveryOrderRepository.update(orderId, {
+      orderStatus: OrderStatus.PreparedForShipment,
+    });
 
-    return this.requireOrder(order, `Order ${orderId} not found`);
+    return Promise.resolve(
+      this.requireOrder(order, `Order ${orderId} not found`),
+    );
   }
 
   async commit(orderId: number): Promise<void> {
     await this.orderShipped(orderId);
   }
 
-  async abort(orderId: number): Promise<void> {
-    const order = await this.deliveryOrderModel
-      .findOneAndUpdate(
-        { orderId },
-        {
-          orderStatus: OrderStatus.NotYetShipped,
-          paymentDate: null,
-          actualShipDate: null,
-        },
-        { new: true },
-      )
-      .exec();
+  abort(orderId: number): Promise<void> {
+    const order = this.deliveryOrderRepository.update(orderId, {
+      orderStatus: OrderStatus.NotYetShipped,
+      paymentDate: null,
+      actualShipDate: null,
+    });
 
     this.requireOrder(order, `Order ${orderId} not found`);
-  }
-
-  private async getNextOrderId(): Promise<number> {
-    const latestOrder = await this.deliveryOrderModel
-      .findOne()
-      .sort({ orderId: -1 })
-      .select('orderId')
-      .exec();
-
-    return latestOrder ? latestOrder.orderId + 1 : 1;
+    return Promise.resolve();
   }
 
   private requireOrder(
-    order: DeliveryOrderDocument | DeliveryOrder | null,
+    order: DeliveryOrder | null,
     message: string,
   ): DeliveryOrder {
     if (!order) {

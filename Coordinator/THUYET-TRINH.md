@@ -73,7 +73,7 @@ baseUrl = config.SERVICES[serviceName];   // fallback URL cấu hình
 
 > **Câu chốt về binding động (§22.7.6):** *"the binding between the service provider and the service requester is **dynamic**."* → Coordinator không biết trước service ở đâu; nó hỏi Broker lúc chạy. Nhờ vậy service có thể đổi cổng/máy mà coordinator không cần sửa.
 
-**Fallback là gì và vì sao có:** hiện chỉ CustomerAccount, Inventory, CreditCard, Email tự đăng ký; Catalog/DeliveryOrder chưa. Fallback (URL trong `config.js`) giúp demo **vẫn chạy** khi thiếu đăng ký. Trên UI, mỗi service hiện rõ được resolve qua `broker` hay `fallback` — minh bạch.
+**Fallback là gì và vì sao có:** các service chính đã tự đăng ký Broker, nhưng fallback (URL trong `config.js`) vẫn giúp demo **vẫn chạy** khi Broker tạm down hoặc service chưa kịp đăng ký. Trên UI, mỗi service hiện rõ được resolve qua `broker` hay `fallback` — minh bạch.
 
 ---
 
@@ -213,7 +213,7 @@ curl "http://localhost:3010/customer/orders/1"
 - Thẻ bị từ chối: đặt item giá cực lớn hoặc `cardId` chứa "DECLINE" → Make Order trả **402**, đơn bị abort.
 - Service chết: tắt DeliveryOrderService → mọi use case liên quan trả **503** rõ ràng, phần còn lại vẫn chạy.
 
-> Thứ tự bật service đầy đủ: Broker(8080) → Catalog(3000)+DeliveryOrder(3001)[cần Mongo] → Inventory(3004) → CustomerAccount(8081) → CreditCard(3006) → Email(3005) → Coordinator(3010).
+> Thứ tự bật service đầy đủ: Broker(8080) → Catalog(3000)+DeliveryOrder(3001) → Inventory(3004) → CustomerAccount(8081) → CreditCard(3006) → Email(3005) → Coordinator(3010).
 
 ---
 

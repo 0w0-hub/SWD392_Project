@@ -1,7 +1,7 @@
 # DeliveryOrderService
 
-NestJS implementation of the Delivery Order Service from the Online Shopping
-System service-oriented architecture case study.
+NestJS + SQLite implementation of the Delivery Order Service from the Online
+Shopping System service-oriented architecture case study.
 
 ## Main operations
 
@@ -26,5 +26,21 @@ pnpm install
 pnpm run start:dev
 ```
 
-The service listens on `PORT` or `3001` by default and uses `MONGODB_URI` or
-`mongodb://localhost:27017/delivery-order`.
+The service listens on `PORT` or `3001` by default and uses SQLite at
+`data/delivery-order.db`. Set `DELIVERY_ORDER_DB` to override the database file.
+
+## Broker registration
+
+- Registers as `DeliveryOrderService` with the project Broker.
+- Exposes `GET /health` for Broker health checks.
+- Sends heartbeats, re-registers after Broker restart, and deregisters on
+  graceful shutdown.
+- Registration is skipped when `BROKER_ENABLED=false` or `NODE_ENV=test`.
+
+| Variable | Default | Purpose |
+|---|---:|---|
+| `BROKER_URL` | `http://localhost:8080` | Broker base URL |
+| `BROKER_HEARTBEAT_INTERVAL_MS` | `30000` | Heartbeat/retry interval |
+| `SERVICE_ID` | process-specific | Unique registry instance ID |
+| `SERVICE_HOST` | `localhost` | Host advertised to Broker |
+| `SERVICE_BASE_URL` | `http://localhost:PORT` | Base URL advertised to Broker |

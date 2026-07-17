@@ -2,6 +2,6 @@ export class Invoice {
   orderId: number;
   accountId: number;
   amountDue: number;
-  actualShipDate?: Date;
+  actualShipDate?: Date | null;
   authorizationId?: number;
 }
