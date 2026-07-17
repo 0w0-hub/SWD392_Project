@@ -1,0 +1,3 @@
+node_modules/
+npm-debug.log*
+# .env được commit để minh hoạ port khi thuyết trình (chỉ chứa port/URL localhost, không bí mật)

@@ -14,5 +14,4 @@ npm-debug.log*
 # OS
 .DS_Store
 
-# env
-.env
+# env (.env được commit để minh hoạ port khi thuyết trình — chỉ chứa port/URL localhost)

@@ -1,0 +1,56 @@
+### Coordinator Service — manual test requests (VS Code REST Client / IntelliJ HTTP)
+### Base = the Coordination layer (Layer 2/3). It discovers services via the Broker.
+@base = http://localhost:3010
+
+### Health
+GET {{base}}/health
+
+### Discovery + reachability of every downstream service
+GET {{base}}/status
+
+# =====================================================================
+# UC1 — Browse Catalog (Customer Coordinator, messages B1–B12)
+# =====================================================================
+### B3/B4 — request catalog by type
+GET {{base}}/customer/catalog?type=Books
+
+### B9/B10 — select an item
+GET {{base}}/customer/catalog/item/1001
+
+# =====================================================================
+# UC2 — Make Order Request (Customer Coordinator, messages M1–M10)
+#   get account (M3/M4) · store order (M7) · CreditCardService.authorizeCharge (M5/M6) · email (M9a)
+#   unitCost is supplied here so the flow works even if CatalogService is offline.
+# =====================================================================
+### Place an order  ->  returns { orderId, authorizationId, ... }
+POST {{base}}/customer/orders
+Content-Type: application/json
+
+{
+  "accountId": 1,
+  "supplierId": 1,
+  "items": [{ "itemId": 1001, "quantity": 1, "unitCost": 39.99 }]
+}
+
+# =====================================================================
+# UC3 — Process Delivery Order (Supplier Coordinator, messages D1–D14)
+# =====================================================================
+### D3/D4 select next order + D5/D6 check inventory
+GET {{base}}/supplier/orders/next?supplierId=1
+
+### D11/D12 reserve items (Prepare To Commit inventory) — use the orderId from UC2
+POST {{base}}/supplier/orders/1/reserve
+
+# =====================================================================
+# UC4 — Confirm Shipment & Bill Customer (Supplier + Billing, messages S1–S12)
+#   Two-Phase Commit: prepare order (S4) · invoice (S5) · verify authorization (S6/S7)
+#   -> commit charge (S8a) · confirm payment (S8b) · email (S8c) · commit inventory (S9)
+# =====================================================================
+### Confirm shipment (runs the 2PC, then ships)
+POST {{base}}/supplier/orders/1/confirm-shipment
+
+# =====================================================================
+# UC5 — View Order (Customer Coordinator, messages V1–V6)
+# =====================================================================
+### V3/V4 read order + invoice
+GET {{base}}/customer/orders/1

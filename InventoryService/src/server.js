@@ -3,6 +3,7 @@
 require('./db'); // open connection + create table on startup
 const express = require('express');
 const inventoryRouter = require('./inventory/inventory.routes');
+const broker = require('./broker');
 
 const app = express();
 app.use(express.json());
@@ -21,8 +22,18 @@ app.use((err, _req, res, _next) => {
 });
 
 const PORT = process.env.PORT || 3004;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`InventoryService listening on http://localhost:${PORT}`);
+  broker.start(PORT); // register with Broker so coordinators can discover us
 });
+
+// Graceful shutdown: deregister from the Broker.
+async function shutdown() {
+  await broker.stop();
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 3000).unref();
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 module.exports = app;

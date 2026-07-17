@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Online Shopping SOA — Demo Console</title>
+    <style>
+      :root {
+        --bg: #0f1420; --panel: #171d2b; --panel2: #1e2536; --border: #2b3347;
+        --text: #e6ebf5; --muted: #8b96ad; --accent: #5b9dff; --accent2: #7c5cff;
+        --ok: #35c28a; --err: #ff6b6b; --warn: #f5b74e;
+        --cust: #5b9dff; --supp: #f0883e; --bill: #7c5cff;
+        --mono: ui-monospace, SFMono-Regular, "Cascadia Code", Consolas, monospace;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f4f6fb; --panel: #ffffff; --panel2: #f0f3fa; --border: #dde3ee;
+          --text: #1a2233; --muted: #667088; --accent: #2f6fed; --accent2: #6b45e0;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; background: var(--bg); color: var(--text);
+        font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      header {
+        padding: 18px 24px; border-bottom: 1px solid var(--border);
+        background: linear-gradient(120deg, var(--panel), var(--panel2));
+        position: sticky; top: 0; z-index: 5;
+      }
+      h1 { margin: 0 0 2px; font-size: 18px; letter-spacing: .2px; }
+      .sub { color: var(--muted); font-size: 12.5px; }
+      .strip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+      .chip {
+        display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+        border: 1px solid var(--border); border-radius: 999px; background: var(--panel2);
+        font-size: 12px; font-family: var(--mono);
+      }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+      .dot.up { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+      .dot.down { background: var(--err); }
+      .chip .via { color: var(--muted); font-size: 10.5px; text-transform: uppercase; }
+      button.mini { margin-left: auto; }
+
+      main { display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: 16px; padding: 16px 24px; max-width: 1500px; }
+      @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+      .col { display: flex; flex-direction: column; gap: 14px; }
+
+      .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+      .card > h2 {
+        margin: 0; padding: 11px 14px; font-size: 13px; letter-spacing: .3px;
+        text-transform: uppercase; border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; gap: 8px;
+      }
+      .card.cust > h2 { color: var(--cust); }
+      .card.supp > h2 { color: var(--supp); }
+      .layer-tag { margin-left: auto; font-size: 10px; color: var(--muted); border: 1px solid var(--border); padding: 1px 7px; border-radius: 6px; }
+      .act { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+      .act:last-child { border-bottom: 0; }
+      .act h3 { margin: 0 0 3px; font-size: 13px; }
+      .act .tag { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-top: 9px; }
+      label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); }
+      input, select, textarea {
+        background: var(--panel2); border: 1px solid var(--border); color: var(--text);
+        border-radius: 8px; padding: 7px 9px; font: inherit; font-size: 13px;
+      }
+      input, select { width: 110px; }
+      textarea { width: 100%; font-family: var(--mono); font-size: 12px; min-height: 54px; resize: vertical; }
+      button {
+        background: var(--accent); color: #fff; border: 0; border-radius: 8px;
+        padding: 8px 14px; font: inherit; font-weight: 600; cursor: pointer; font-size: 13px;
+      }
+      button:hover { filter: brightness(1.08); }
+      button:active { transform: translateY(1px); }
+      button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); font-weight: 500; }
+      .card.supp button { background: var(--supp); }
+
+      /* Console */
+      .console { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; min-height: 420px; }
+      .console > h2 { margin: 0; padding: 11px 14px; font-size: 13px; text-transform: uppercase; letter-spacing: .3px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+      #log { flex: 1; overflow: auto; padding: 10px 12px; font-family: var(--mono); font-size: 12px; }
+      .entry { padding: 8px 10px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--border); background: var(--panel2); }
+      .entry.cust { border-left-color: var(--cust); }
+      .entry.supp { border-left-color: var(--supp); }
+      .entry.bill { border-left-color: var(--bill); }
+      .entry.ok { border-left-color: var(--ok); }
+      .entry.err { border-left-color: var(--err); }
+      .entry .hd { display: flex; gap: 8px; align-items: center; margin-bottom: 3px; }
+      .entry .uc { font-weight: 700; }
+      .entry .msgs { color: var(--muted); }
+      .entry .status { margin-left: auto; font-weight: 700; }
+      .entry .status.ok { color: var(--ok); } .entry .status.err { color: var(--err); }
+      .entry pre { margin: 4px 0 0; white-space: pre-wrap; word-break: break-word; color: var(--text); opacity: .92; max-height: 220px; overflow: auto; }
+      .steps { list-style: none; margin: 4px 0 0; padding: 0; }
+      .steps li { color: var(--muted); padding-left: 14px; position: relative; }
+      .steps li::before { content: "→"; position: absolute; left: 0; color: var(--accent); }
+      .toolbar { margin-left: auto; display: flex; gap: 8px; }
+      .flow { font-size: 11px; color: var(--muted); padding: 8px 14px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+      .flow b { color: var(--text); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Online Shopping — Service-Oriented Architecture Console</h1>
+      <div class="sub">Gomaa Ch.22 · 3-tầng: <b>User Interaction</b> → <b>Coordinator</b> → <b>Services</b> (discovery qua Broker)</div>
+      <div class="strip" id="strip"><span class="chip"><span class="dot"></span>đang tải trạng thái…</span>
+        <button class="ghost mini" id="refresh">↻ Trạng thái</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- ===== Customer Interaction ===== -->
+      <div class="col">
+        <div class="card cust">
+          <h2>🛒 Customer Interaction <span class="layer-tag">Layer 3 · Customer Coordinator</span></h2>
+
+          <div class="act">
+            <h3>Browse Catalog</h3><span class="tag">UC1 · B1–B12</span>
+            <div class="row">
+              <label>catalogType
+                <select id="bc-type"><option>Books</option><option>Computers</option><option>Home</option><option>Toys</option></select>
+              </label>
+              <button data-uc="Browse Catalog" data-layer="cust" data-msgs="B3→B4"
+                data-steps="Customer Coordinator → CatalogService.requestCatalog"
+                onclick="call(this,'GET','/customer/catalog?type='+val('bc-type'))">Browse</button>
+            </div>
+          </div>
+
+          <div class="act">
+            <h3>Make Order Request</h3><span class="tag">UC2 · M1–M10</span>
+            <div class="row">
+              <label>accountId <input id="mo-acc" type="number" value="1" /></label>
+              <label>supplierId <input id="mo-sup" type="number" value="1" /></label>
+            </div>
+            <div class="row"><label style="width:100%">items (JSON)
+              <textarea id="mo-items">[{ "itemId": 1001, "quantity": 1, "unitCost": 39.99 }]</textarea>
+            </label></div>
+            <div class="row">
+              <button data-uc="Make Order Request" data-layer="cust" data-msgs="M3/M4→M7→M5/M6→M9a"
+                data-steps="get account · store order · CreditCardService.authorizeCharge · email confirm"
+                onclick="makeOrder(this)">Place Order</button>
+            </div>
+          </div>
+
+          <div class="act">
+            <h3>View Order</h3><span class="tag">UC5 · V1–V6</span>
+            <div class="row">
+              <label>orderId <input id="vo-id" type="number" value="1" /></label>
+              <button data-uc="View Order" data-layer="cust" data-msgs="V3→V4"
+                data-steps="Customer Coordinator → DeliveryOrderService.read"
+                onclick="call(this,'GET','/customer/orders/'+val('vo-id'))">View</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Supplier Interaction ===== -->
+      <div class="col">
+        <div class="card supp">
+          <h2>🏭 Supplier Interaction <span class="layer-tag">Layer 3 · Supplier + Billing Coord.</span></h2>
+
+          <div class="act">
+            <h3>Process Delivery Order</h3><span class="tag">UC3 · D1–D8</span>
+            <div class="row">
+              <label>supplierId <input id="pd-sup" type="number" value="1" /></label>
+              <button data-uc="Process Delivery Order" data-layer="supp" data-msgs="D3/D4→D5/D6"
+                data-steps="select next order · check inventory each item"
+                onclick="call(this,'GET','/supplier/orders/next?supplierId='+val('pd-sup'))">Get Next Order</button>
+            </div>
+          </div>
+
+          <div class="act">
+            <h3>Reserve Items</h3><span class="tag">UC3 · D9–D14 (Prepare to Commit)</span>
+            <div class="row">
+              <label>orderId <input id="rs-id" type="number" value="1" /></label>
+              <button data-uc="Reserve Items" data-layer="supp" data-msgs="D11→D12"
+                data-steps="InventoryService.reserveInventory (mỗi item) · rollback nếu hết hàng"
+                onclick="call(this,'POST','/supplier/orders/'+val('rs-id')+'/reserve')">Reserve</button>
+            </div>
+          </div>
+
+          <div class="act">
+            <h3>Confirm Shipment &amp; Bill Customer</h3><span class="tag">UC4 · S1–S12 · Two-Phase Commit</span>
+            <div class="flow" style="border:0;padding:8px 0 0">
+              <b>Phase 1 (prepare):</b> DO.prepare(S4) · invoice(S5) · verify authorization(S6/S7)<br />
+              <b>Phase 2 (commit):</b> commitCharge(S8a) · confirmPayment(S8b) · email(S8c) · commitInventory(S9)
+            </div>
+            <div class="row">
+              <label>orderId <input id="cs-id" type="number" value="1" /></label>
+              <button data-uc="Confirm Shipment &amp; Bill" data-layer="bill" data-msgs="S3→2PC→S9/S10→S11/S12"
+                data-steps="Billing Coordinator chạy 2PC · Supplier commit inventory · ship"
+                onclick="call(this,'POST','/supplier/orders/'+val('cs-id')+'/confirm-shipment')">Confirm Shipment</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Console ===== -->
+      <div class="col">
+        <div class="console">
+          <h2>📡 SOA Message Log
+            <div class="toolbar"><button class="ghost" onclick="clearLog()">Clear</button></div>
+          </h2>
+          <div class="flow">Mỗi hành động hiện <b>use case</b>, <b>message numbers</b> (Gomaa) và phản hồi thật từ các service.</div>
+          <div id="log"></div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const val = (id) => document.getElementById(id).value;
+      const logEl = document.getElementById('log');
+
+      function entry(layer, uc, msgs, steps) {
+        const div = document.createElement('div');
+        div.className = 'entry ' + layer;
+        div.innerHTML =
+          '<div class="hd"><span class="uc">' + uc + '</span>' +
+          '<span class="msgs">' + msgs + '</span>' +
+          '<span class="status">…</span></div>' +
+          (steps ? '<ul class="steps">' + steps.split(' · ').map(s => '<li>' + s + '</li>').join('') + '</ul>' : '') +
+          '<pre></pre>';
+        logEl.prepend(div);
+        return div;
+      }
+      function finish(div, ok, status, body) {
+        div.classList.add(ok ? 'ok' : 'err');
+        const st = div.querySelector('.status');
+        st.textContent = (ok ? '✓ ' : '✗ ') + status;
+        st.classList.add(ok ? 'ok' : 'err');
+        div.querySelector('pre').textContent =
+          typeof body === 'string' ? body : JSON.stringify(body, null, 2);
+      }
+
+      async function call(btn, method, url) {
+        const d = btn.dataset;
+        const div = entry(d.layer, d.uc, d.msgs, d.steps);
+        try {
+          const res = await fetch(url, { method });
+          const body = await res.json().catch(() => ({}));
+          finish(div, res.ok, res.status, body);
+        } catch (e) { finish(div, false, 'NETWORK', String(e)); }
+      }
+
+      async function post(btn, url, payload) {
+        const d = btn.dataset;
+        const div = entry(d.layer, d.uc, d.msgs, d.steps);
+        try {
+          const res = await fetch(url, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const body = await res.json().catch(() => ({}));
+          finish(div, res.ok, res.status, body);
+        } catch (e) { finish(div, false, 'NETWORK', String(e)); }
+      }
+
+      function makeOrder(btn) {
+        let items;
+        try { items = JSON.parse(val('mo-items')); }
+        catch { return alert('items phải là JSON hợp lệ'); }
+        post(btn, '/customer/orders', {
+          accountId: Number(val('mo-acc')),
+          supplierId: Number(val('mo-sup')),
+          items,
+        });
+      }
+
+      function clearLog() { logEl.innerHTML = ''; }
+
+      // ---- Service status strip ----
+      async function refreshStatus() {
+        const strip = document.getElementById('strip');
+        try {
+          const s = await (await fetch('/status')).json();
+          const chips = [];
+          chips.push(chip('Broker', s.broker.reachable, s.broker.reachable ? 'registry' : 'down'));
+          for (const svc of s.services) chips.push(chip(svc.name.replace('Service', ''), svc.reachable, svc.via));
+          strip.innerHTML = chips.join('') +
+            '<button class="ghost mini" id="refresh">↻ Trạng thái</button>';
+          document.getElementById('refresh').onclick = refreshStatus;
+        } catch {
+          strip.innerHTML = '<span class="chip"><span class="dot down"></span>không lấy được /status</span>';
+        }
+      }
+      function chip(name, up, via) {
+        return '<span class="chip"><span class="dot ' + (up ? 'up' : 'down') + '"></span>' +
+          name + ' <span class="via">' + via + '</span></span>';
+      }
+      refreshStatus();
+      setInterval(refreshStatus, 10000);
+    </script>
+  </body>
+</html>
