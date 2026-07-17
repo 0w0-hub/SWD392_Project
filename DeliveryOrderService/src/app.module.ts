@@ -1,13 +1,10 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { BrokerModule } from './broker/broker.module';
 import { DeliveryOrderModule } from './delivery-order/delivery-order.module';
+import { HealthController } from './health.controller';
 
 @Module({
-  imports: [
-    MongooseModule.forRoot(
-      process.env.MONGODB_URI ?? 'mongodb://localhost:27017/delivery-order',
-    ),
-    DeliveryOrderModule,
-  ],
+  imports: [DeliveryOrderModule, BrokerModule],
+  controllers: [HealthController],
 })
 export class AppModule {}

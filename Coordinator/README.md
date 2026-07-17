@@ -29,7 +29,7 @@ Biến môi trường (đều có mặc định): `PORT`, `BROKER_URL`, `CATALOG
 
 ### Thứ tự khởi động cho demo đầy đủ
 1. **Broker** (8080) — `mvn spring-boot:run` trong `Broker/`
-2. **CatalogService** (3000), **DeliveryOrderService** (3001) — cần MongoDB
+2. **CatalogService** (3000), **DeliveryOrderService** (3001) — dùng SQLite local
 3. **InventoryService** (3004) — `npm start` (đã tự đăng ký Broker)
 4. **CustomerAccountService** (8081) — `mvn spring-boot:run` (profile `demo` nạp sẵn khách hàng + tài khoản)
 5. **CreditCardService** (3006) — `npm start` trong `CreditCardService/`
